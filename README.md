@@ -1,8 +1,11 @@
-# Subscription Sentinel
+# Subscription Sentinel 🚀
+
+**Live Site:** [https://wajid968.github.io/Subscription-Sentinel/](https://wajid968.github.io/Subscription-Sentinel/)
 
 > Track every recurring expense. Get reminded before you're charged. Visualize your spending.
 
-A premium, full-featured subscription tracker built with **vanilla HTML, CSS & JavaScript** on the frontend and **Supabase** (PostgreSQL, Auth, Edge Functions) on the backend.
+A premium, full-featured subscription tracker built with **vanilla HTML, CSS & JavaScript** on the frontend and **Supabase** (PostgreSQL, Auth, Edge Functions) on the backend. This app is a **PWA (Progressive Web App)**, meaning you can install it on your phone for a native-like experience!
+
 
 ---
 

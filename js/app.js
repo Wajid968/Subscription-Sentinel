@@ -112,6 +112,20 @@ async function handleAuth(e) {
   }
 }
 
+async function signInWithGoogle() {
+  try {
+    const { error } = await sb.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo: window.location.origin + window.location.pathname
+      }
+    });
+    if (error) throw error;
+  } catch (err) {
+    showAuthError('Google sign-in failed: ' + (err.message || 'Unknown error'));
+  }
+}
+
 async function signOut() {
   await sb.auth.signOut();
 }
