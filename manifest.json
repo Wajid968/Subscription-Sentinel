@@ -1,0 +1,17 @@
+{
+  "name": "Subscription Sentinel",
+  "short_name": "SubSentinel",
+  "description": "Recurring Expense Tracker and Dashboard",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#0A0F1C",
+  "theme_color": "#0EA5E9",
+  "icons": [
+    {
+      "src": "./icon.svg",
+      "sizes": "192x192 512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

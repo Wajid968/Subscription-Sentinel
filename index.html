@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Subscription Sentinel – Recurring Expense Tracker</title>
+  <meta name="description" content="Track all your subscriptions and recurring expenses in one place. Get reminded before billing dates and visualize your spending." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="apple-touch-icon" href="icon.svg">
+  <link rel="manifest" href="manifest.json" />
+  <link rel="stylesheet" href="css/styles.css" />
+  <!-- Supabase JS CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <!-- Chart.js CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+</head>
+<body>
+
+  <!-- ══════════════════════════════════════
+       AUTH SCREEN
+  ══════════════════════════════════════ -->
+  <div id="auth-screen" class="auth-screen">
+    <div class="auth-bg-orbs">
+      <div class="orb orb-1"></div>
+      <div class="orb orb-2"></div>
+      <div class="orb orb-3"></div>
+    </div>
+
+    <div class="auth-card">
+      <div class="auth-logo">
+        <svg width="40" height="40" viewBox="0 0 40 40" fill="none">
+          <rect width="40" height="40" rx="12" fill="url(#logoGrad)"/>
+          <path d="M20 8C13.373 8 8 13.373 8 20C8 26.627 13.373 32 20 32C26.627 32 32 26.627 32 20" stroke="white" stroke-width="2.5" stroke-linecap="round"/>
+          <path d="M20 8C20 8 28 12 28 20" stroke="white" stroke-width="2.5" stroke-linecap="round"/>
+          <circle cx="28" cy="14" r="3" fill="white"/>
+          <defs>
+            <linearGradient id="logoGrad" x1="0" y1="0" x2="40" y2="40" gradientUnits="userSpaceOnUse">
+              <stop stop-color="#6366f1"/>
+              <stop offset="1" stop-color="#8b5cf6"/>
+            </linearGradient>
+          </defs>
+        </svg>
+        <span>Subscription Sentinel</span>
+      </div>
+
+      <div class="auth-tabs">
+        <button class="auth-tab active" id="tab-signin" onclick="switchAuthTab('signin')">Sign In</button>
+        <button class="auth-tab" id="tab-signup" onclick="switchAuthTab('signup')">Sign Up</button>
+      </div>
+
+      <div id="auth-error" class="auth-message auth-message--error hidden"></div>
+      <div id="auth-success" class="auth-message auth-message--success hidden"></div>
+
+      <form id="auth-form" onsubmit="handleAuth(event)">
+        <div class="form-group">
+          <label for="auth-email">Email Address</label>
+          <input type="email" id="auth-email" placeholder="you@example.com" required autocomplete="email" />
+        </div>
+        <div class="form-group">
+          <label for="auth-password">Password</label>
+          <input type="password" id="auth-password" placeholder="••••••••" required autocomplete="current-password" minlength="6" />
+        </div>
+        <button type="submit" class="btn btn-primary btn-full" id="auth-submit-btn">
+          <span id="auth-btn-text">Sign In</span>
+          <div class="spinner hidden" id="auth-spinner"></div>
+        </button>
+      </form>
+
+      <p class="auth-footer">
+        <span id="auth-footer-text">Don't have an account?</span>
+        <a href="#" onclick="switchAuthTab('signup')" id="auth-footer-link">Sign Up</a>
+      </p>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════
+       MAIN APP
+  ══════════════════════════════════════ -->
+  <div id="app-screen" class="app-screen hidden">
+
+    <!-- NAVBAR -->
+    <nav class="navbar">
+      <div class="navbar-brand">
+        <svg width="28" height="28" viewBox="0 0 40 40" fill="none">
+          <rect width="40" height="40" rx="12" fill="url(#navLogoGrad)"/>
+          <path d="M20 8C13.373 8 8 13.373 8 20C8 26.627 13.373 32 20 32C26.627 32 32 26.627 32 20" stroke="white" stroke-width="2.5" stroke-linecap="round"/>
+          <path d="M20 8C20 8 28 12 28 20" stroke="white" stroke-width="2.5" stroke-linecap="round"/>
+          <circle cx="28" cy="14" r="3" fill="white"/>
+          <defs>
+            <linearGradient id="navLogoGrad" x1="0" y1="0" x2="40" y2="40" gradientUnits="userSpaceOnUse">
+              <stop stop-color="#6366f1"/>
+              <stop offset="1" stop-color="#8b5cf6"/>
+            </linearGradient>
+          </defs>
+        </svg>
+        <span>Subscription Sentinel</span>
+      </div>
+      <div class="navbar-right">
+        <select id="currency-select" class="select-sm" onchange="updateCurrency()" aria-label="Select Currency">
+          <option value="$">USD ($)</option>
+          <option value="€">EUR (€)</option>
+          <option value="£">GBP (£)</option>
+          <option value="¥">JPY (¥)</option>
+          <option value="₹">INR (₹)</option>
+        </select>
+        <span class="user-email" id="user-email-display"></span>
+        <button class="btn btn-ghost btn-sm" onclick="signOut()" id="signout-btn">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+            <polyline points="16 17 21 12 16 7"/>
+            <line x1="21" y1="12" x2="9" y2="12"/>
+          </svg>
+          Sign Out
+        </button>
+      </div>
+    </nav>
+
+    <!-- MAIN CONTENT -->
+    <main class="main-content">
+
+      <!-- PAGE HEADER -->
+      <div class="page-header">
+        <div>
+          <h1 class="page-title">Dashboard</h1>
+          <p class="page-subtitle">Manage and track all your recurring expenses</p>
+        </div>
+        <div class="header-actions">
+          <button class="btn btn-primary" onclick="openModal()" id="add-sub-btn">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+            </svg>
+            Add Subscription
+          </button>
+        </div>
+      </div>
+
+      <!-- TOTALS CARDS -->
+      <div class="totals-grid" id="totals-grid">
+        <div class="totals-card totals-card--monthly">
+          <div class="totals-icon">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+              <line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
+            </svg>
+          </div>
+          <div class="totals-info">
+            <span class="totals-label">Monthly Cost</span>
+            <span class="totals-value" id="monthly-total">$0.00</span>
+          </div>
+        </div>
+        <div class="totals-card totals-card--yearly">
+          <div class="totals-icon">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/>
+              <polyline points="17 6 23 6 23 12"/>
+            </svg>
+          </div>
+          <div class="totals-info">
+            <span class="totals-label">Yearly Cost</span>
+            <span class="totals-value" id="yearly-total">$0.00</span>
+          </div>
+        </div>
+        <div class="totals-card totals-card--active">
+          <div class="totals-icon">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+              <polyline points="22 4 12 14.01 9 11.01"/>
+            </svg>
+          </div>
+          <div class="totals-info">
+            <span class="totals-label">Active Subscriptions</span>
+            <span class="totals-value" id="active-count">0</span>
+          </div>
+        </div>
+        <div class="totals-card totals-card--upcoming">
+          <div class="totals-icon">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="10"/>
+              <polyline points="12 6 12 12 16 14"/>
+            </svg>
+          </div>
+          <div class="totals-info">
+            <span class="totals-label">Due This Week</span>
+            <span class="totals-value" id="upcoming-count">0</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- CHART + LIST GRID -->
+      <div class="content-grid">
+
+        <!-- SUBSCRIPTION LIST -->
+        <div class="card subscriptions-card">
+          <div class="card-header">
+            <h2 class="card-title">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/>
+                <line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/>
+              </svg>
+              Subscriptions
+            </h2>
+            <div class="filter-group">
+              <select id="filter-sort" onchange="renderSubscriptions()" class="select-sm" aria-label="Sort">
+                <option value="date-desc">Added (Newest)</option>
+                <option value="date-asc">Added (Oldest)</option>
+                <option value="cost-desc">Cost (High to Low)</option>
+                <option value="cost-asc">Cost (Low to High)</option>
+                <option value="name-asc">A to Z</option>
+                <option value="due-asc">Next Billing Date</option>
+              </select>
+              <select id="filter-category" onchange="renderSubscriptions()" class="select-sm" aria-label="Filter by category">
+                <option value="">All Categories</option>
+              </select>
+              <select id="filter-status" onchange="renderSubscriptions()" class="select-sm" aria-label="Filter by status">
+                <option value="active">Active</option>
+                <option value="all">All</option>
+                <option value="inactive">Inactive</option>
+              </select>
+            </div>
+          </div>
+
+          <div id="loading-state" class="empty-state">
+            <div class="spinner-lg"></div>
+            <p>Loading subscriptions…</p>
+          </div>
+
+          <div id="empty-state" class="empty-state hidden">
+            <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1">
+              <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+              <line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
+            </svg>
+            <h3>No subscriptions yet</h3>
+            <p>Add your first subscription to start tracking</p>
+            <button class="btn btn-primary" onclick="openModal()">Add Subscription</button>
+          </div>
+
+          <div id="subscription-list" class="subscription-list hidden"></div>
+        </div>
+
+        <!-- CHART PANEL -->
+        <div class="chart-panel">
+          <div class="card chart-card">
+            <div class="card-header">
+              <h2 class="card-title">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M21.21 15.89A10 10 0 1 1 8 2.83"/>
+                  <path d="M22 12A10 10 0 0 0 12 2v10z"/>
+                </svg>
+                By Category
+              </h2>
+            </div>
+            <div class="chart-wrapper">
+              <canvas id="category-chart"></canvas>
+            </div>
+            <div id="chart-legend" class="chart-legend"></div>
+          </div>
+
+          <div class="card upcoming-card">
+            <div class="card-header">
+              <h2 class="card-title">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+                  <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+                </svg>
+                Upcoming Renewals
+              </h2>
+            </div>
+            <div id="upcoming-list" class="upcoming-list">
+              <div class="empty-mini">No upcoming renewals in next 7 days</div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </main>
+  </div>
+
+  <!-- ══════════════════════════════════════
+       ADD / EDIT MODAL
+  ══════════════════════════════════════ -->
+  <div id="modal-overlay" class="modal-overlay hidden" onclick="closeModalOnOverlay(event)">
+    <div class="modal" id="modal-box">
+      <div class="modal-header">
+        <h2 id="modal-title">Add Subscription</h2>
+        <button class="modal-close" onclick="closeModal()" aria-label="Close modal">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+          </svg>
+        </button>
+      </div>
+      <form id="subscription-form" onsubmit="handleFormSubmit(event)" novalidate>
+        <input type="hidden" id="edit-id" value="" />
+        <div class="form-row">
+          <div class="form-group">
+            <label for="sub-name">Service Name <span class="required">*</span></label>
+            <input type="text" id="sub-name" placeholder="e.g. Netflix" required />
+          </div>
+          <div class="form-group">
+            <label for="sub-amount">Amount ($) <span class="required">*</span></label>
+            <input type="number" id="sub-amount" placeholder="9.99" required min="0" step="0.01" />
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label for="sub-cycle">Billing Cycle <span class="required">*</span></label>
+            <select id="sub-cycle" required>
+              <option value="monthly">Monthly</option>
+              <option value="yearly">Yearly</option>
+              <option value="weekly">Weekly</option>
+              <option value="quarterly">Quarterly</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="sub-date">Next Billing Date <span class="required">*</span></label>
+            <input type="date" id="sub-date" required />
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label for="sub-category">Category <span class="required">*</span></label>
+            <select id="sub-category" required>
+              <option value="">Select category…</option>
+              <option value="Entertainment">🎬 Entertainment</option>
+              <option value="Software">💻 Software</option>
+              <option value="Fitness">🏋️ Fitness</option>
+              <option value="Music">🎵 Music</option>
+              <option value="News">📰 News & Media</option>
+              <option value="Cloud">☁️ Cloud Storage</option>
+              <option value="Gaming">🎮 Gaming</option>
+              <option value="Education">📚 Education</option>
+              <option value="Finance">💳 Finance</option>
+              <option value="Shopping">🛍️ Shopping</option>
+              <option value="Other">📦 Other</option>
+            </select>
+          </div>
+          <div class="form-group form-group--toggle">
+            <label>Status</label>
+            <label class="toggle-label">
+              <input type="checkbox" id="sub-active" checked />
+              <span class="toggle-track">
+                <span class="toggle-thumb"></span>
+              </span>
+              <span class="toggle-text" id="toggle-text">Active</span>
+            </label>
+          </div>
+        </div>
+        <div class="form-group">
+          <label for="sub-notes">Notes <span class="optional">(optional)</span></label>
+          <textarea id="sub-notes" placeholder="Any additional notes…" rows="2"></textarea>
+        </div>
+
+        <div id="form-error" class="auth-message auth-message--error hidden"></div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+          <button type="submit" class="btn btn-primary" id="form-submit-btn">
+            <span id="form-btn-text">Save Subscription</span>
+            <div class="spinner hidden" id="form-spinner"></div>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- DELETE CONFIRM MODAL -->
+  <div id="delete-overlay" class="modal-overlay hidden">
+    <div class="modal modal--sm" id="delete-box">
+      <div class="modal-header">
+        <h2>Delete Subscription</h2>
+        <button class="modal-close" onclick="closeDeleteModal()" aria-label="Close modal">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+          </svg>
+        </button>
+      </div>
+      <p class="delete-message">Are you sure you want to delete <strong id="delete-name"></strong>? This action cannot be undone.</p>
+      <div class="modal-footer">
+        <button class="btn btn-ghost" onclick="closeDeleteModal()">Cancel</button>
+        <button class="btn btn-danger" id="confirm-delete-btn" onclick="confirmDelete()">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>
+          </svg>
+          Delete
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- TOAST NOTIFICATION -->
+  <div id="toast" class="toast hidden">
+    <span id="toast-message"></span>
+  </div>
+
+  <script src="js/config.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
