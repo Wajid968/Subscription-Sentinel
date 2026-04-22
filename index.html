@@ -106,6 +106,9 @@
           <option value="₹">INR (₹)</option>
         </select>
         <span class="user-email" id="user-email-display"></span>
+        <span id="pro-badge" class="sub-badge badge-cycle badge-pro hidden">PRO</span>
+        <button class="btn btn-primary btn-sm" id="upgrade-btn" onclick="openPricingModal()">Upgrade</button>
+        <button class="btn btn-ghost btn-sm hidden" id="manage-btn" onclick="handleManageSubscription()">Manage</button>
         <button class="btn btn-ghost btn-sm" onclick="signOut()" id="signout-btn">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
@@ -391,6 +394,39 @@
   <!-- TOAST NOTIFICATION -->
   <div id="toast" class="toast hidden">
     <span id="toast-message"></span>
+  </div>
+
+  <!-- PRICING / UPGRADE MODAL -->
+  <div id="pricing-overlay" class="modal-overlay hidden" onclick="closePricingModalOnOverlay(event)">
+    <div class="modal modal--sm" id="pricing-box">
+      <div class="modal-header">
+        <h2>Upgrade to Pro 🚀</h2>
+        <button class="modal-close" onclick="closePricingModal()" aria-label="Close modal">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+          </svg>
+        </button>
+      </div>
+      <div class="pricing-content">
+        <p>Unlock the full power of Subscription Sentinel.</p>
+        <ul class="pricing-features">
+          <li>✨ Unlimited Subscriptions (Free limit: 3)</li>
+          <li>🎯 Priority Email Reminders</li>
+          <li>📊 Advanced Spending Insights</li>
+          <li>💎 Premium Support</li>
+        </ul>
+        <div class="pricing-price">
+          <span class="price-amount">$5</span><span class="price-period">/month</span>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-ghost" onclick="closePricingModal()">Maybe Later</button>
+        <button class="btn btn-primary" onclick="handleUpgrade()" id="checkout-btn">
+          <span>Get Pro Now</span>
+          <div class="spinner hidden" id="checkout-spinner"></div>
+        </button>
+      </div>
+    </div>
   </div>
 
   <script src="js/config.js"></script>

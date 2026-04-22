@@ -4,11 +4,14 @@
 
 /* ── State ───────────────────────────────────────────── */
 let currentUser      = null;
+let userProfile      = null;
 let subscriptions    = [];
 let editingId        = null;
 let deleteTargetId   = null;
 let chartInstance    = null;
 let currentCurrency  = localStorage.getItem('sub_sentinel_currency') || '$';
+
+const FREE_LIMIT = 3;
 
 function updateCurrency() {
   currentCurrency = document.getElementById('currency-select').value;
@@ -116,15 +119,47 @@ async function signOut() {
   await sb.auth.signOut();
 }
 
-function onLogin(user) {
+async function onLogin(user) {
   currentUser = user;
   document.getElementById('user-email-display').textContent = user.email;
+  
+  // Fetch profile (Pro status)
+  try {
+    const { data, error } = await sb
+      .from('profiles')
+      .select('*')
+      .eq('id', user.id)
+      .maybeSingle();
+    
+    if (error) throw error;
+    userProfile = data;
+    
+    // Update UI based on Pro status
+    updateProUI();
+  } catch (err) {
+    console.error('Profile fetch error:', err);
+  }
+
   showScreen('app');
   loadSubscriptions();
 }
 
+function updateProUI() {
+  const isPro = userProfile?.is_pro || false;
+  // We'll add a Pro badge and upgrade button to the HTML in the next step
+  const badge = document.getElementById('pro-badge');
+  if (badge) badge.classList.toggle('hidden', !isPro);
+  
+  const upgradeBtn = document.getElementById('upgrade-btn');
+  if (upgradeBtn) upgradeBtn.classList.toggle('hidden', isPro);
+
+  const manageBtn = document.getElementById('manage-btn');
+  if (manageBtn) manageBtn.classList.toggle('hidden', !isPro);
+}
+
 function onLogout() {
   currentUser = null;
+  userProfile = null;
   subscriptions = [];
   showScreen('auth');
 }
@@ -454,8 +489,18 @@ async function handleFormSubmit(e) {
   const notes    = document.getElementById('sub-notes').value.trim();
   const active   = document.getElementById('sub-active').checked;
 
-  // Validate
   const errEl = document.getElementById('form-error');
+
+  // Enforce Free Tier Limit
+  const isPro = userProfile?.is_pro || false;
+  if (!editingId && !isPro && subscriptions.length >= FREE_LIMIT) {
+    errEl.textContent = `Free limit reached (${FREE_LIMIT} subscriptions). Upgrade to Pro for unlimited tracking!`;
+    errEl.classList.remove('hidden');
+    // We could trigger the upgrade modal here
+    return;
+  }
+
+  // Validate
   if (!name || !amount || !cycle || !date || !category) {
     errEl.textContent = 'Please fill in all required fields.';
     errEl.classList.remove('hidden');
@@ -572,6 +617,51 @@ function showScreen(name) {
 
 function showModal(id)  { document.getElementById(id).classList.remove('hidden'); document.body.style.overflow = 'hidden'; }
 function hideModal(id)  { document.getElementById(id).classList.add('hidden'); document.body.style.overflow = ''; }
+
+/* ── Pricing Modal ── */
+function openPricingModal() { showModal('pricing-overlay'); }
+function closePricingModal() { hideModal('pricing-overlay'); }
+function closePricingModalOnOverlay(e) { if (e.target === document.getElementById('pricing-overlay')) closePricingModal(); }
+
+async function handleUpgrade() {
+  setCheckoutLoading(true, 'checkout-spinner', 'checkout-btn');
+  try {
+    const { data, error } = await sb.functions.invoke('stripe-checkout', {
+      body: { return_url: window.location.origin + window.location.pathname }
+    });
+    if (error) throw error;
+    if (data?.url) window.location.href = data.url;
+  } catch (err) {
+    showToast('Failed to start checkout: ' + (err.message || 'Unknown error'), 'error');
+  } finally {
+    setCheckoutLoading(false, 'checkout-spinner', 'checkout-btn');
+  }
+}
+
+async function handleManageSubscription() {
+  const btn = document.getElementById('manage-btn');
+  const orgHtml = btn.innerHTML;
+  btn.disabled = true;
+  btn.innerHTML = '<div class="spinner-sm"></div>';
+
+  try {
+    const { data, error } = await sb.functions.invoke('stripe-portal', {
+      body: { return_url: window.location.origin + window.location.pathname }
+    });
+    if (error) throw error;
+    if (data?.url) window.location.href = data.url;
+  } catch (err) {
+    showToast('Failed to open portal: ' + (err.message || 'Unknown error'), 'error');
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = orgHtml;
+  }
+}
+
+function setCheckoutLoading(on, spinnerId, btnId) {
+  document.getElementById(spinnerId).classList.toggle('hidden', !on);
+  document.getElementById(btnId).disabled = on;
+}
 
 function showLoadingState() {
   document.getElementById('loading-state').classList.remove('hidden');
